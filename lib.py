@@ -1,9 +1,18 @@
 import pygame
+from pygame import mixer
 import os
+import math
 
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 FPS = 60
+speed = 20
+offset = 1420 / ((speed * 60) / 1000)
+
+perfect_score = 10
+good_score = 5
+
+mixer.init()
 
 
 # Load in images
@@ -16,29 +25,133 @@ def load_images(path):
     return images
 
 
+def draw_score(screen, score, font, colour):
+    score_text = font.render(str(score), True, colour)
+    screen.blit(score_text, (SCREEN_WIDTH - score_text.get_width() - 20, 20))
+
+
+# Class to store data for each image
 class BackgroundImages:
-    def __init__(self, x, y, images, speeds):
-        self.width = images[0].get_width()
+    def __init__(self, x, y, images, speed):
+        self.width = images.get_width()
         self.images = images
-        self.speeds = speeds
+        self.speed = speed
         self.x = x
         self.y = y
 
-    def draw(self, screen):
-        for count, i in enumerate(self.images):
-            self.x -= self.speeds[count]
-            if self.x < -self.width:
-                #difference = self.width + self.x
-                self.x = self.width * 2
-            screen.blit(i, (self.x, self.y))
+    def draw(self, screen, speed):
+        self.x -= speed
+        if self.x <= -self.width:
+            self.x = self.width * 2
+        screen.blit(self.images, (self.x, self.y))
 
 
 # Implement parallax effect
 class Background:
     def __init__(self, images, speeds):
         self.width = images[0].get_width()
-        self.images = [BackgroundImages(i * self.width, 0, images,  speeds) for i in range(3)]
+        self.speeds = speeds
+        self.images = []
+        for count, i in enumerate(images):
+            self.images.append([BackgroundImages(j * SCREEN_WIDTH, 0, i, self.speeds[count]) for j in range(3)])
 
     def draw(self, screen):
         for count, i in enumerate(self.images):
-            i.draw(screen)
+            for j in i:
+                j.draw(screen, self.speeds[count])
+
+
+class Spatula:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.current_frame = None
+        self.prev_time = pygame.time.get_ticks()
+
+    def idle(self, screen, images):
+        if pygame.time.get_ticks() > self.prev_time + 10:
+            self.current_frame = next(images)
+            self.prev_time = pygame.time.get_ticks()
+        if self.current_frame:
+            screen.blit(self.current_frame, (self.x, self.y))
+
+
+class Beatmarker:
+    def __init__(self, rect, rev=1):
+        self.rect = rect
+        self.rev = rev
+
+    def draw(self, screen, circle):
+        circle2 = pygame.transform.rotate(circle, pygame.time.get_ticks() / 7 * self.rev)
+        rect = circle2.get_rect(center=self.rect.center)
+        screen.blit(circle2, rect)
+
+
+class Beat:
+    def __init__(self, rect, speed, yaccel, img):
+        self.rect = rect
+        self.speed = speed
+        self.yvel = 0
+        self.yaccel = yaccel
+        self.hit = False
+        self.img = img
+
+    def draw(self, screen):
+        img = self.img
+        if self.rect.right <= 0 or self.rect.bottom <= 0:
+            return False
+        self.rect.x -= self.speed
+        if self.yvel > 0:
+            self.yvel -= self.yaccel
+        self.rect.y -= self.yvel
+
+
+        # Spinning animation
+        if self.hit:
+            rect = self.rect
+            img = pygame.transform.rotate(self.img, pygame.time.get_ticks())
+            img.get_rect(x=rect.x, y=rect.y)
+
+        screen.blit(img, self.rect)
+        return True
+
+    def check(self, beatmarker):
+        if abs(self.rect.center[0] - beatmarker.rect.center[0]) < 25 and self.rect.y == beatmarker.rect.y:
+            self.yvel = 35
+            self.hit = True
+            return perfect_score
+        if abs(self.rect.center[0] - beatmarker.rect.center[0]) < 65 and self.rect.y == beatmarker.rect.y:
+            self.yvel = 25
+            self.hit = True
+            return good_score
+        return 0
+
+
+# Object for storing the beats
+class BeatMap():
+    def __init__(self, beats, image1, image2):
+        self.beats_upper = [Beat(image1.get_rect(x=1920, y=150), speed, 2, image1) if i else None for i in beats[0]]
+        self.beats_lower = [Beat(image2.get_rect(x=1920, y=550), speed, 2, image2) if i else None for i in beats[1]]
+        self.beats_lower.reverse()
+        self.beats_upper.reverse()
+        self.beats_onscreen_upper = []
+        self.beats_onscreen_lower = []
+        self.time = pygame.time.get_ticks()
+
+    def next_beat(self, screen, beat_clock):
+        if self.time and pygame.time.get_ticks() > self.time + 1420 / 1.2 + 150:
+            mixer.music.load("assets/music/Dance till You're Dead (FULL REMIX) [Bass Boosted].mp3")
+            mixer.music.set_volume(0.5)
+            mixer.music.play()
+            self.time = None
+
+        if beat_clock and len(self.beats_upper) > 0 and len(self.beats_lower) > 0:
+            self.beats_onscreen_upper.append(self.beats_upper.pop())
+            self.beats_onscreen_lower.append(self.beats_lower.pop())
+
+        for i in self.beats_onscreen_upper:
+            if i:
+                i.draw(screen)
+        for i in self.beats_onscreen_lower:
+            if i:
+                i.draw(screen)
