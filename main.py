@@ -1,7 +1,7 @@
 # Charles Huang 1/12/2023
 # Ms. Townshend
 # ICS4U0
-# Muse dash style rhythm game with fish
+# Rhythm Game in Pygame
 import pygame
 from lib import *
 from dancetillyourdead import *
