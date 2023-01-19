@@ -25,14 +25,16 @@ spatula_idle = itertools.cycle(spatula_idle)
 
 spatula = Spatula(100, 450)
 
-# Beat map
+# Beat map setup
 beatmarker_img = pygame.transform.scale(load_images("assets/beats/")[0].convert_alpha(), (240, 220))
 beatmarker_upper = Beatmarker(beatmarker_img.get_rect(x=500, y=150))
 beatmarker_lower = Beatmarker(beatmarker_img.get_rect(x=500, y=550), -1)
 
+# Load fishiesieshiesh
 fish_orange = pygame.transform.scale(load_images("assets/beats/")[1].convert_alpha(), (200, 200))
 fish_blue = pygame.transform.scale(load_images("assets/beats/")[2].convert_alpha(), (200, 200))
 
+# init variables
 background_obj = Background(background, [5, 4, 5, 6, 7, 9])  # Speeds of each layer
 beats = []
 score = 0
@@ -40,7 +42,8 @@ bpm = 154 * 4
 beat_time = round(60000 / bpm)
 beat_map = BeatMap(song, fish_orange, fish_blue)
 
-pygame.time.set_timer(pygame.USEREVENT, beat_time)
+pygame.time.set_timer(pygame.USEREVENT, beat_time)  # Calls an event every x milliseconds
+
 # Game loop
 running = True
 while running:
@@ -48,11 +51,11 @@ while running:
     beat_hit = None
     events = pygame.event.get()
     for event in events:
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT:   # Check for window close
             running = False
-        if event.type == pygame.USEREVENT:
+        if event.type == pygame.USEREVENT:  # Check for beat
             beat_clock = True
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN:    # Check for key press
             if event.key == pygame.K_d:
                 for i in beat_map.beats_onscreen_upper:
                     if i:

@@ -3,6 +3,7 @@ from pygame import mixer
 import os
 import math
 
+# Constants
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 FPS = 60
@@ -24,7 +25,7 @@ def load_images(path):
             images.append(pygame.image.load(path + filename).convert_alpha())
     return images
 
-
+# Display score on screen
 def draw_score(screen, score, font, colour):
     score_text = font.render(str(score), True, colour)
     screen.blit(score_text, (SCREEN_WIDTH - score_text.get_width() - 20, 20))
@@ -39,7 +40,7 @@ class BackgroundImages:
         self.x = x
         self.y = y
 
-    def draw(self, screen, speed):
+    def draw(self, screen, speed):  # Draw the background images
         self.x -= speed
         if self.x <= -self.width:
             self.x = self.width * 2
@@ -61,6 +62,7 @@ class Background:
                 j.draw(screen, self.speeds[count])
 
 
+# Spatula animation
 class Spatula:
     def __init__(self, x, y):
         self.x = x
@@ -76,6 +78,7 @@ class Spatula:
             screen.blit(self.current_frame, (self.x, self.y))
 
 
+# Class for the marker that indicates when to hit the beat
 class Beatmarker:
     def __init__(self, rect, rev=1):
         self.rect = rect
@@ -87,6 +90,7 @@ class Beatmarker:
         screen.blit(circle2, rect)
 
 
+# Class to manage individual beats
 class Beat:
     def __init__(self, rect, speed, yaccel, img):
         self.rect = rect
@@ -98,13 +102,15 @@ class Beat:
 
     def draw(self, screen):
         img = self.img
+        # Don't keep track of beats after they are off the screen
         if self.rect.right <= 0 or self.rect.bottom <= 0:
             return False
+
+        # Change beat position
         self.rect.x -= self.speed
         if self.yvel > 0:
             self.yvel -= self.yaccel
         self.rect.y -= self.yvel
-
 
         # Spinning animation
         if self.hit:
@@ -115,6 +121,7 @@ class Beat:
         screen.blit(img, self.rect)
         return True
 
+    # Check if the beat has been hit
     def check(self, beatmarker):
         if abs(self.rect.center[0] - beatmarker.rect.center[0]) < 25 and self.rect.y == beatmarker.rect.y:
             self.yvel = 35
@@ -138,17 +145,20 @@ class BeatMap():
         self.beats_onscreen_lower = []
         self.time = pygame.time.get_ticks()
 
+
     def next_beat(self, screen, beat_clock):
-        if self.time and pygame.time.get_ticks() > self.time + 1420 / 1.2 + 150:
+        if self.time and pygame.time.get_ticks() > self.time + 1420 / 1.2 + 150:    # offset the playing of the song so that beats hit at the right time
             mixer.music.load("assets/music/Dance till You're Dead (FULL REMIX) [Bass Boosted].mp3")
             mixer.music.set_volume(0.5)
             mixer.music.play()
             self.time = None
 
+        # Add the next beat to the screen
         if beat_clock and len(self.beats_upper) > 0 and len(self.beats_lower) > 0:
             self.beats_onscreen_upper.append(self.beats_upper.pop())
             self.beats_onscreen_lower.append(self.beats_lower.pop())
 
+        # Display all beats
         for i in self.beats_onscreen_upper:
             if i:
                 i.draw(screen)
